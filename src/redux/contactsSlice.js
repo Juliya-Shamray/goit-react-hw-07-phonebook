@@ -1,45 +1,74 @@
-import { createSlice, nanoid } from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
+import { createSlice, isAnyOf } from '@reduxjs/toolkit';
+import {
+  addContactThunk,
+  deleteContactThunk,
+  getContactsThunk,
+} from './operations';
 
 const initialState = {
-  contacts: [],
+  contacts: {
+    items: [],
+    isLoading: false,
+    error: null,
+  },
   filter: '',
 };
 export const contactsSlice = createSlice({
   name: 'contacts',
   initialState,
   reducers: {
-    addContact: {
-      prepare: (contactName, number) => {
-        return {
-          payload: {
-            id: nanoid(),
-            contactName,
-            number,
-          },
-        };
-      },
-      reducer: (state, action) => {
-        const findByName = state.contacts.find(
-          contact => contact.contactName === action.payload.contactName
-        );
-        if (!findByName) {
-          state.contacts.push(action.payload);
-        } else toast.info(`${findByName.contactName} is already in contacts`);
-      },
-    },
-    removeContact: (state, action) => {
-      state.contacts = state.contacts.filter(
-        contact => contact.id !== action.payload
-      );
-    },
     updateFilter: (state, action) => {
       state.filter = action.payload;
     },
   },
+  extraReducers: builder =>
+    builder
+      .addCase(getContactsThunk.fulfilled, (state, { payload }) => {
+        state.contacts.items = payload;
+      })
+      .addCase(addContactThunk.fulfilled, (state, { payload }) => {
+        state.contacts.items.push(payload);
+      })
+      .addCase(deleteContactThunk.fulfilled, (state, { payload }) => {
+        state.contacts.items = state.contacts.items.filter(
+          item => item.id !== payload
+        );
+      })
+      .addMatcher(
+        isAnyOf(
+          getContactsThunk.pending,
+          addContactThunk.pending,
+          deleteContactThunk.pending
+        ),
+        state => {
+          state.contacts.isLoading = true;
+          state.contacts.error = null;
+        }
+      )
+      .addMatcher(
+        isAnyOf(
+          getContactsThunk.rejected,
+          addContactThunk.rejected,
+          deleteContactThunk.rejected
+        ),
+        (state, { payload }) => {
+          state.contacts.isLoading = false;
+          state.contacts.error = payload;
+        }
+      )
+      .addMatcher(
+        isAnyOf(
+          getContactsThunk.fulfilled,
+          addContactThunk.fulfilled,
+          deleteContactThunk.fulfilled
+        ),
+        state => {
+          state.contacts.isLoading = false;
+          state.contacts.error = null;
+        }
+      ),
 });
 
-export const { addContact, removeContact, updateFilter } =
-  contactsSlice.actions;
+export const { updateFilter } = contactsSlice.actions;
 
 export const contactsReducer = contactsSlice.reducer;

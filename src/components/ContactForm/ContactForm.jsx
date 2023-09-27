@@ -5,19 +5,26 @@ import {
   StyledInput,
   StyledLabel,
 } from './ContactForm.styled';
-import { useDispatch } from 'react-redux';
-import { addContact } from 'redux/contactsSlice';
+import { useDispatch, useSelector } from 'react-redux';
+import { addContactThunk } from 'redux/operations';
+import { toast } from 'react-toastify';
+import { selectContacts } from 'redux/selectors';
 
 export const ContactForm = () => {
   const [name, setName] = useState('');
-  const [number, setNumber] = useState('');
+  const [phone, setPhone] = useState('');
+  const contacts = useSelector(selectContacts);
   const dispatch = useDispatch();
 
   const handleSubmit = e => {
     e.preventDefault();
-    dispatch(addContact(name, number));
+    const findByName = contacts.find(contact => contact.name === name);
+    if (!findByName) {
+      dispatch(addContactThunk({ name, phone }));
+    } else toast.info(`${findByName.name} is already in contacts`);
+
     setName('');
-    setNumber('');
+    setPhone('');
   };
 
   return (
@@ -42,9 +49,9 @@ export const ContactForm = () => {
           pattern="[0-9+\s]*"
           title="Phone number must be digits and can contain spaces, dashes, parentheses and can start with +"
           required
-          value={number}
+          value={phone}
           onChange={e => {
-            setNumber(e.target.value);
+            setPhone(e.target.value);
           }}
         />
       </StyledLabel>
